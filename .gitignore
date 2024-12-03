@@ -1,0 +1,15 @@
+server/__pycache__
+server/venv
+server/db.sqlite3
+server/migrations
+
+client/.import/
+client/export.cfg
+client/export_presets.cfg
+
+client/*.translation
+
+client/.mono
+client/data_*/
+
+client/HTML5
