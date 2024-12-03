@@ -5,7 +5,7 @@ from twisted.internet.interfaces import IAddress
 
 import protocol
 from twisted.python import log
-from twisted.internet import reactor, task
+from twisted.internet import reactor, task, ssl
 from autobahn.twisted.websocket import WebSocketServerFactory
 
 
@@ -13,7 +13,7 @@ class GameFactory(WebSocketServerFactory):
 
     def __init__(self, hostname: str, port: int):
         self.protocol = protocol.GameServerProtocol
-        super().__init__(f"ws://{hostname}:{port}")
+        super().__init__(f"wss://{hostname}:{port}")
 
         self.players: set[protocol.GameServerProtocol] = set()
         self.tick_rate: int = 20
@@ -34,8 +34,11 @@ class GameFactory(WebSocketServerFactory):
 if __name__ == '__main__':
     log.startLogging(sys.stdout)
 
-    port: int = 8081
-    factory = GameFactory('127.0.0.1', port)
+    certs_dir: str = f"{sys.path[0]}/certs/"
+    contextFactory = ssl.DefaultOpenSSLContextFactory(certs_dir + "server.key", certs_dir + "server.crt")
 
-    reactor.listenTCP(port, factory)
+    PORT: int = 8081
+    factory = GameFactory('0.0.0.0', PORT)
+
+    reactor.listenSSL(PORT, factory, contextFactory)
     reactor.run()

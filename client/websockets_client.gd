@@ -21,7 +21,7 @@ func _ready():
 func connect_to_server(hostname: String, port: int) -> void:
 	# Connects to the server or emits an error signal.
 	# If connected, emits a connect signal.
-	var websocket_url = "ws://%s:%d" % [hostname, port]
+	var websocket_url = "wss://%s:%d" % [hostname, port]
 	var err = _client.connect_to_url(websocket_url)
 	if err:
 		print("Unable to connect")
