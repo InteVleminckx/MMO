@@ -13,3 +13,5 @@ client/.mono
 client/data_*/
 
 client/HTML5
+
+.idea/
