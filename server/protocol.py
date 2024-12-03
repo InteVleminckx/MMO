@@ -9,6 +9,7 @@ from autobahn.websocket import ConnectionRequest
 from server.packet import *
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from autobahn.exception import Disconnected
+from django.contrib.auth import authenticate
 
 
 class GameServerProtocol(WebSocketServerProtocol):
@@ -42,31 +43,40 @@ class GameServerProtocol(WebSocketServerProtocol):
     def LOGIN(self, sender: 'GameServerProtocol', p: Packet):
         if p.action == Action.Login:
             username, password = p.payloads
-            if User.objects.filter(username=username, password=password).exists():
-                user = User.objects.get(username=username)
+
+            user = authenticate(username=username, password=password)
+            if user:
                 self._actor = Actor.objects.get(user=user)
 
                 self.send_client(OkPacket())
+
+                # Send full model data the first time we log in
                 self.broadcast(ModelDeltaPacket(create_dict(self._actor)))
 
                 self._state = self.PLAY
             else:
-                self.send_client(DenyPacket("The username or password is incorrect."))
+                self.send_client(DenyPacket("Username or password incorrect"))
 
         elif p.action == Action.Register:
             username, password, avatar_id = p.payloads
+
+            if not username or not password:
+                self.send_client(DenyPacket("Username or password must not be empty"))
+                return
+
             if User.objects.filter(username=username).exists():
-                self.send_client(DenyPacket("This username is already taken."))
-            else:
-                user = User(username=username, password=password)
-                user.save()
-                player_entity = Entity(name=username)
-                player_entity.save()
-                player_ientity = InstancedEntity(entity=player_entity, x=0, y=0)
-                player_ientity.save()
-                player = Actor(instanced_entity=player_ientity, user=user, avatar_id=avatar_id)
-                player.save()
-                self.send_client(OkPacket())
+                self.send_client(DenyPacket("This username is already taken"))
+                return
+
+            user = User.objects.create_user(username=username, password=password)
+            user.save()
+            player_entity = Entity(name=username)
+            player_entity.save()
+            player_ientity = InstancedEntity(entity=player_entity, x=0, y=0)
+            player_ientity.save()
+            player = Actor(instanced_entity=player_ientity, user=user, avatar_id=avatar_id)
+            player.save()
+            self.send_client(OkPacket())
 
     def _update_position(self) -> bool:
         """Attempt to update the actor's position and return true only if the position was changed"""
